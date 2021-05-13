@@ -22,15 +22,15 @@ import org.geolatte.geom.crs.CoordinateReferenceSystems;
 
 import static java.lang.String.format;
 
-public class PLTParser {
+public class SimplePLTParser {
 
 	final static CoordinateReferenceSystem<G2D> WGS84 = CoordinateReferenceSystems.WGS84;
 
-	Logger LOG = LoggerFactory.getLogger( PLTParser.class );
+	Logger LOG = LoggerFactory.getLogger( SimplePLTParser.class );
 	final private Path path;
 	final private UUID trajectoryId;
 
-	PLTParser(Path path) {
+	SimplePLTParser(Path path) {
 		this.path = path;
 		this.trajectoryId = UUID.randomUUID();
 	}

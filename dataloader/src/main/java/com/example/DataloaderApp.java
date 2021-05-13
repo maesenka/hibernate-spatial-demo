@@ -3,7 +3,6 @@ package com.example;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
@@ -16,7 +15,6 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.Signal;
 import reactor.core.scheduler.Schedulers;
 
 @SpringBootApplication
@@ -61,8 +59,8 @@ public class DataloaderApp implements CommandLineRunner {
 	private Flux<?> processPaths(Flux<Path> paths) {
 		return paths.parallel( PARALLELISM )
 				.runOn( Schedulers.parallel() )
-				.map( PLTParser::new )
-				.map( PLTParser::parse )
+				.map( SimplePLTParser::new )
+				.map( SimplePLTParser::parse )
 				.filter( Objects::nonNull )
 				.sequential()
 				.buffer( 128 )
