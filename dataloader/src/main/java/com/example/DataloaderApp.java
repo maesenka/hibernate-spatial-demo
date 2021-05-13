@@ -3,6 +3,7 @@ package com.example;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
@@ -15,6 +16,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Signal;
 import reactor.core.scheduler.Schedulers;
 
 @SpringBootApplication
@@ -46,15 +48,18 @@ public class DataloaderApp implements CommandLineRunner {
 			System.err.println( "Argument missing." );
 			return;
 		}
-		processPaths( walk( args[0] ) );
-	}
-
-	private void processPaths(Flux<Path> paths) {
-		final long start = System.currentTimeMillis();
 		LOG.info( "Parallelism set at: " + PARALLELISM );
 		LOG.info( "Batchsize set at: " + batchSize );
+		final long start = System.currentTimeMillis();
+		walk( args[0] )
+				.transform( this::processPaths )
+				.doOnError( Throwable::printStackTrace )
+				.doOnTerminate( () -> System.out.println( "Parsing all files took (ms): " + ( System.currentTimeMillis() - start ) ) )
+				.blockLast();
+	}
 
-		paths.parallel( PARALLELISM )
+	private Flux<?> processPaths(Flux<Path> paths) {
+		return paths.parallel( PARALLELISM )
 				.runOn( Schedulers.parallel() )
 				.map( PLTParser::new )
 				.map( PLTParser::parse )
@@ -64,11 +69,7 @@ public class DataloaderApp implements CommandLineRunner {
 				.parallel( PARALLELISM )
 				.runOn( Schedulers.parallel() )
 				.doOnNext( repository::saveAll )
-				.sequential()
-				.doOnError( Throwable::printStackTrace )
-				.doOnTerminate( () -> System.out.println( "Parsing all files took (s): " + ( System.currentTimeMillis() - start ) / 1000 ) )
-				.blockLast();
-
+				.sequential();
 	}
 
 	private Flux<Path> walk(String directory) {
