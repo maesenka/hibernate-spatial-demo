@@ -4,17 +4,18 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.geolatte.geom.G2D;
 import org.geolatte.geom.LineString;
+import org.geolatte.geom.PositionSequenceBuilder;
 import org.geolatte.geom.PositionSequenceBuilders;
 import org.geolatte.geom.crs.CoordinateReferenceSystem;
 import org.geolatte.geom.crs.CoordinateReferenceSystems;
@@ -38,13 +39,18 @@ public class PLTParser {
 	Trajectory parse() {
 		LOG.debug( "Parsing " + path + " on thread" + Thread.currentThread().getName() );
 		try {
-			var tscos = Files.readString( path )
+			var seqBuilder = PositionSequenceBuilders.variableSized( G2D.class );
+			List<LocalDateTime> times = new ArrayList<>();
+			Files.readString( path )
 					.lines()
-					.skip( 6 ) //skip the first six lines, per documentation
+					.skip( 6 ) //skip the first six lines as per documentation
 					.map( this::toTimestampedCoordinate )
-					.filter( Objects::nonNull )
-					.collect( Collectors.toList() );
-			return buildTrajectory( tscos );
+					.filter( Objects::nonNull)
+					.forEach( tsco -> {
+						seqBuilder.add( tsco.lon, tsco.lat );
+						times.add( tsco.timestamp );
+					});
+			return buildTrajectory( seqBuilder, times );
 		}
 		catch (IOException e) {
 			LOG.warn( format( "Failure to read file %s", path ), e );
@@ -52,26 +58,14 @@ public class PLTParser {
 		}
 	}
 
-	private Trajectory buildTrajectory(List<TSCoordinate> coordinates) {
-		if ( coordinates.size() < 2 ) {
+	private Trajectory buildTrajectory(PositionSequenceBuilder<G2D> seqBuilder, List<LocalDateTime> times){
+		if ( times.size() < 2 ) {
 			return null;
 		}
-
-		LineString<G2D> ls = buildLineString( coordinates );
-
-		List<LocalDateTime> times = coordinates.stream()
-				.map( l -> l.timestamp )
-				.collect( Collectors.toList() );
+		LineString<G2D> ls = new LineString<>( seqBuilder.toPositionSequence(), WGS84 );
 		LocalDateTime start = Collections.min( times );
 		LocalDateTime stop = Collections.max( times );
 		return new Trajectory( ls, start, stop, this.trajectoryId );
-	}
-
-	private LineString<G2D> buildLineString(List<TSCoordinate> coordinates) {
-		var seqbuilder = PositionSequenceBuilders.fixedSized(
-				coordinates.size(), G2D.class );
-		coordinates.forEach( tsco -> seqbuilder.add( tsco.lon, tsco.lat ) );
-		return new LineString<>( seqbuilder.toPositionSequence(), WGS84 );
 	}
 
 	TSCoordinate toTimestampedCoordinate(String pltline) {
