@@ -20,7 +20,7 @@ public class Trajectory {
 
 	private LocalDateTime start;
 
-	private Duration duration;
+	private Long durationInMinutes;
 
 	private UUID trajectory;
 
@@ -29,7 +29,7 @@ public class Trajectory {
 	public Trajectory(LineString lineString, LocalDateTime start, LocalDateTime stop, UUID trajectory) {
 		this.geometry = lineString;
 		this.start = start;
-		this.duration = Duration.between( stop, start );
+		this.durationInMinutes = Duration.between( start, stop ).toMinutes();
 		this.trajectory = trajectory;
 	}
 

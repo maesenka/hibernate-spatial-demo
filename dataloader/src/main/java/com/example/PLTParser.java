@@ -1,14 +1,12 @@
 package com.example;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
-import java.util.Comparator;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -18,6 +16,8 @@ import org.slf4j.LoggerFactory;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.LineString;
+
+import static java.lang.String.format;
 
 public class PLTParser {
 
@@ -29,23 +29,23 @@ public class PLTParser {
 	PLTParser(Path path) {
 		this.path = path;
 		this.trajectoryId = UUID.randomUUID();
-		LOG.info( path.toAbsolutePath().toString() );
 	}
 
-	Optional<Trajectory> parse() {
-		//for simplicity we first read all GPS points in a list and only if that fully succeeds we
-		try (BufferedReader reader = Files.newBufferedReader( path )) {
-			//first ensure that we read all lines before we close the reader
-			List<TSCoordinate> coordinates = reader.lines()
+	// Returns null in case of errors
+	Trajectory parse() {
+		LOG.debug( "Parsing " + path + " on thread" + Thread.currentThread().getName() );
+		try {
+			var tscos = Files.readString(path)
+					.lines()
 					.skip( 6 ) //skip the first six lines, per documentation
 					.map( this::toTimestampedCoordinate )
 					.filter( Objects::nonNull )
 					.collect( Collectors.toList() );
-			return Optional.ofNullable( buildTrajectory( coordinates ) );
+			return buildTrajectory( tscos );
 		}
 		catch (IOException e) {
-			LOG.warn( "Failure to open file " + path.toAbsolutePath(), e );
-			return Optional.empty();
+			LOG.warn( format("Failure to read file %s", path), e );
+			return null;
 		}
 	}
 
@@ -53,12 +53,21 @@ public class PLTParser {
 		if ( coordinates.size() < 2 ) {
 			return null;
 		}
-		List<Coordinate> coords = coordinates.stream().map( l -> l.coordinate ).collect( Collectors.toList() );
-		LineString ls = geometryFactory.createLineString( coords.toArray( new Coordinate[] {} ) );
-		//using get() is save because we first checked for coordinate size
-		LocalDateTime start = coordinates.stream().map( l -> l.timestamp ).min( Comparator.naturalOrder() ).get();
-		LocalDateTime stop = coordinates.stream().map( l -> l.timestamp ).max( Comparator.naturalOrder() ).get();
+		LineString ls = buildLineString( coordinates );
+
+		List<LocalDateTime> times = coordinates.stream()
+				.map( l -> l.timestamp )
+				.collect( Collectors.toList() );
+		LocalDateTime start = Collections.min( times );
+		LocalDateTime stop = Collections.max( times );
 		return new Trajectory( ls, start, stop, this.trajectoryId );
+	}
+
+	private LineString buildLineString(List<TSCoordinate> coordinates) {
+		List<Coordinate> coords = coordinates.stream().map( l -> l.coordinate ).collect( Collectors.toList() );
+		LineString ls = geometryFactory.createLineString( coords.toArray( Coordinate[]::new ) );
+		ls.setSRID( 4326 );
+		return ls;
 	}
 
 
