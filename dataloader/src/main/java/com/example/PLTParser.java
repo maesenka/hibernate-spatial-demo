@@ -13,18 +13,21 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.locationtech.jts.geom.Coordinate;
-import org.locationtech.jts.geom.GeometryFactory;
-import org.locationtech.jts.geom.LineString;
+import org.geolatte.geom.G2D;
+import org.geolatte.geom.LineString;
+import org.geolatte.geom.PositionSequenceBuilders;
+import org.geolatte.geom.crs.CoordinateReferenceSystem;
+import org.geolatte.geom.crs.CoordinateReferenceSystems;
 
 import static java.lang.String.format;
 
 public class PLTParser {
 
+	final static CoordinateReferenceSystem<G2D> WGS84 = CoordinateReferenceSystems.WGS84;
+
 	Logger LOG = LoggerFactory.getLogger( PLTParser.class );
 	final private Path path;
 	final private UUID trajectoryId;
-	final private GeometryFactory geometryFactory = new GeometryFactory();
 
 	PLTParser(Path path) {
 		this.path = path;
@@ -35,7 +38,7 @@ public class PLTParser {
 	Trajectory parse() {
 		LOG.debug( "Parsing " + path + " on thread" + Thread.currentThread().getName() );
 		try {
-			var tscos = Files.readString(path)
+			var tscos = Files.readString( path )
 					.lines()
 					.skip( 6 ) //skip the first six lines, per documentation
 					.map( this::toTimestampedCoordinate )
@@ -44,7 +47,7 @@ public class PLTParser {
 			return buildTrajectory( tscos );
 		}
 		catch (IOException e) {
-			LOG.warn( format("Failure to read file %s", path), e );
+			LOG.warn( format( "Failure to read file %s", path ), e );
 			return null;
 		}
 	}
@@ -53,7 +56,8 @@ public class PLTParser {
 		if ( coordinates.size() < 2 ) {
 			return null;
 		}
-		LineString ls = buildLineString( coordinates );
+
+		LineString<G2D> ls = buildLineString( coordinates );
 
 		List<LocalDateTime> times = coordinates.stream()
 				.map( l -> l.timestamp )
@@ -63,26 +67,23 @@ public class PLTParser {
 		return new Trajectory( ls, start, stop, this.trajectoryId );
 	}
 
-	private LineString buildLineString(List<TSCoordinate> coordinates) {
-		List<Coordinate> coords = coordinates.stream().map( l -> l.coordinate ).collect( Collectors.toList() );
-		LineString ls = geometryFactory.createLineString( coords.toArray( Coordinate[]::new ) );
-		ls.setSRID( 4326 );
-		return ls;
+	private LineString<G2D> buildLineString(List<TSCoordinate> coordinates) {
+		var seqbuilder = PositionSequenceBuilders.fixedSized(
+				coordinates.size(), G2D.class );
+		coordinates.forEach( tsco -> seqbuilder.add( tsco.lon, tsco.lat ) );
+		return new LineString<>( seqbuilder.toPositionSequence(), WGS84 );
 	}
-
 
 	TSCoordinate toTimestampedCoordinate(String pltline) {
 		String[] elems = pltline.split( "," );
 
 		try {
-			//we store points in lon-lat format,
-			//this means the x coordinate is longitude, and the y coordinate latitude
-			Coordinate co = new Coordinate(
-					Double.parseDouble( elems[1] ),
-					Double.parseDouble( elems[0] )
-			);
 			LocalDateTime timestamp = LocalDateTime.parse( elems[5] + "T" + elems[6] );
-			return new TSCoordinate( co, timestamp );
+			return new TSCoordinate(
+					Double.parseDouble( elems[1] ),
+					Double.parseDouble( elems[0] ),
+					timestamp
+			);
 		}
 		catch (Throwable t) {
 			LOG.warn( "Failure to parse line", t );
@@ -92,11 +93,13 @@ public class PLTParser {
 }
 
 class TSCoordinate {
-	final Coordinate coordinate;
+	final double lon;
+	final double lat;
 	final LocalDateTime timestamp;
 
-	TSCoordinate(Coordinate coordinate, LocalDateTime timestamp) {
-		this.coordinate = coordinate;
+	TSCoordinate(double lon, double lat, LocalDateTime timestamp) {
+		this.lon = lon;
+		this.lat = lat;
 		this.timestamp = timestamp;
 	}
 }

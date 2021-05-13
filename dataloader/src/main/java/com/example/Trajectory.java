@@ -7,7 +7,8 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 
-import org.locationtech.jts.geom.LineString;
+import org.geolatte.geom.LineString;
+
 
 @Entity
 public class Trajectory {
@@ -16,7 +17,7 @@ public class Trajectory {
 	@GeneratedValue
 	private UUID id;
 
-	private LineString geometry;
+	private LineString<?> geometry;
 
 	private LocalDateTime start;
 
@@ -26,7 +27,7 @@ public class Trajectory {
 
 	public Trajectory(){}
 
-	public Trajectory(LineString lineString, LocalDateTime start, LocalDateTime stop, UUID trajectory) {
+	public Trajectory(LineString<?> lineString, LocalDateTime start, LocalDateTime stop, UUID trajectory) {
 		this.geometry = lineString;
 		this.start = start;
 		this.durationInMinutes = Duration.between( start, stop ).toMinutes();
