@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component;
 @Component
 public interface TrajectoryCustomRepository {
 
-	@RestResource(path="intersects")
-	List<Trajectory> intersects(double minlon, double minlat, double maxlon, double maxlat);
+	@RestResource(path="bbox")
+	List<Trajectory> bbox(String bbox, int zoom);
 
 }

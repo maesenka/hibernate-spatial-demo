@@ -1,6 +1,8 @@
 package com.example.repositories;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
@@ -35,34 +37,31 @@ public class TrajectoryCustomRepositoryImpl implements TrajectoryCustomRepositor
 	private EntityManager entityManager;
 
 	@Override
-	public List<Trajectory> intersects(
-			double minlon, double minlat, double maxlon, double maxlat) {
+	public List<Trajectory> bbox(String bbox, int zoom) {
 		CriteriaBuilder cb = entityManager.getCriteriaBuilder();
 		CriteriaQuery<Trajectory> query = cb.createQuery( Trajectory.class );
 		Root<Trajectory> root = query.from( Trajectory.class );
-		Polygon<G2D> filterPoly = polygon(
-				WGS84,
-				ring(
-						g( minlon, minlat ),
-						g( minlon, maxlat ),
-						g( maxlon, maxlat ),
-						g( maxlon, minlat ),
-						g( minlon, minlat )
-				)
-		);
-		ParameterExpression<Polygon> filterParam = cb.parameter( Polygon.class );
-		Predicate pred = GeolatteSpatialPredicates.intersects(
-				cb,
-				root.get( "geometry" ),
-				filterParam
-		);
-
-		query.where( pred );
+		Envelope<G2D> envelope = fromBbox( bbox );
+		GeolatteFilterPredicate filterPred = new GeolatteFilterPredicate( cb, root.get( "geometry" ), envelope );
+		query.where( filterPred );
 
 		return entityManager
 				.createQuery( query )
-				.setParameter( filterParam, filterPoly )
 				.getResultList();
+	}
+
+	private Envelope<G2D> fromBbox(String bbox) {
+		String[] elems = bbox.split( "," );
+		if (elems.length != 4) {
+			throw new IllegalArgumentException("Bbox requires exactly 4 doubles");
+		}
+		try {
+			List<Double> co = Arrays.stream( elems ).map( Double::parseDouble ).collect( Collectors.toList() );
+			return new Envelope<>( co.get(0), co.get(1), co.get(2), co.get(3), WGS84 );
+		}catch(NumberFormatException e){
+			throw new IllegalArgumentException("Bbox requires exactly 4 doubles");
+		}
+
 	}
 
 }
