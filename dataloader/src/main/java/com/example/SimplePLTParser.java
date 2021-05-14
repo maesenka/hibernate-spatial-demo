@@ -28,29 +28,27 @@ public class SimplePLTParser {
 
 	Logger LOG = LoggerFactory.getLogger( SimplePLTParser.class );
 	final private Path path;
-	final private UUID trajectoryId;
 
 	SimplePLTParser(Path path) {
 		this.path = path;
-		this.trajectoryId = UUID.randomUUID();
 	}
 
 	// Returns null in case of errors
 	Trajectory parse() {
 		LOG.debug( "Parsing " + path + " on thread" + Thread.currentThread().getName() );
 		try {
-			var seqBuilder = PositionSequenceBuilders.variableSized( G2D.class );
+			var positions = PositionSequenceBuilders.variableSized( G2D.class );
 			List<LocalDateTime> times = new ArrayList<>();
 			Files.readString( path )
 					.lines()
 					.skip( 6 ) //skip the first six lines as per documentation
-					.map( this::toTimestampedCoordinate )
-					.filter( Objects::nonNull)
+					.map( this::toTimestampedCoordinate ) //here we parse the GPS log record
+					.filter( Objects::nonNull ) //filter out lines we couldn't parse
 					.forEach( tsco -> {
-						seqBuilder.add( tsco.lon, tsco.lat );
+						positions.add( tsco.lon, tsco.lat );
 						times.add( tsco.timestamp );
-					});
-			return buildTrajectory( seqBuilder, times );
+					} );
+			return buildTrajectory( positions, times );
 		}
 		catch (IOException e) {
 			LOG.warn( format( "Failure to read file %s", path ), e );
@@ -58,14 +56,14 @@ public class SimplePLTParser {
 		}
 	}
 
-	private Trajectory buildTrajectory(PositionSequenceBuilder<G2D> seqBuilder, List<LocalDateTime> times){
+	private Trajectory buildTrajectory(PositionSequenceBuilder<G2D> seqBuilder, List<LocalDateTime> times) {
 		if ( times.size() < 2 ) {
 			return null;
 		}
-		LineString<G2D> ls = new LineString<>( seqBuilder.toPositionSequence(), WGS84 );
-		LocalDateTime start = Collections.min( times );
-		LocalDateTime stop = Collections.max( times );
-		return new Trajectory( ls, start, stop, this.trajectoryId );
+		var ls = new LineString<>( seqBuilder.toPositionSequence(), WGS84 );
+		var start = Collections.min( times );
+		var stop = Collections.max( times );
+		return new Trajectory( ls, start, stop );
 	}
 
 	TSCoordinate toTimestampedCoordinate(String pltline) {

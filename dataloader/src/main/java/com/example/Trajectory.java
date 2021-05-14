@@ -23,15 +23,12 @@ public class Trajectory {
 
 	private Long durationInMinutes;
 
-	private UUID trajectory;
-
 	public Trajectory(){}
 
-	public Trajectory(LineString<?> lineString, LocalDateTime start, LocalDateTime stop, UUID trajectory) {
+	public Trajectory(LineString<?> lineString, LocalDateTime start, LocalDateTime stop) {
 		this.geometry = lineString;
 		this.start = start;
 		this.durationInMinutes = Duration.between( start, stop ).toMinutes();
-		this.trajectory = trajectory;
 	}
 
 }
