@@ -1,0 +1,15 @@
+{
+  "name": "TrajectoryMap",
+  "version": "1.0.0",
+  "description": "Example using OpenLayers",
+  "scripts": {
+    "build": "wp --config webpack.config.js"
+  },
+  "devDependencies": {
+    "webpack": "^5.36.2",
+    "webpack-nano": "^1.1.1"
+  },
+  "dependencies": {
+    "ol": "^6.5.0"
+  }
+}

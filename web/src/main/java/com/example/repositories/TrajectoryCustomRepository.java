@@ -16,6 +16,6 @@ import org.springframework.stereotype.Component;
 public interface TrajectoryCustomRepository {
 
 	@RestResource(path="bbox")
-	List<Trajectory> bbox(String bbox, int zoom);
+	List<Trajectory> bbox(String bbox);
 
 }

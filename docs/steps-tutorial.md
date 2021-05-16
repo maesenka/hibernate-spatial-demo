@@ -62,7 +62,9 @@ The actual parsing
 mvn archetype:generate -DgroupId=com.example -DartifactId=dataloader
 
 # A simple front end  
-Voor front-end: Leaflet met uGeoJson Layer plugin
+
+Quickstart OpenLayers
+Using https://github.com/openlayers/ol-webpack to get a minimal build env.
 
 
 
