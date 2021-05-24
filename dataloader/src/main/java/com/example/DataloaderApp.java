@@ -25,12 +25,12 @@ public class DataloaderApp implements CommandLineRunner {
 	//you can limit the amount of files (trajectories) to read
 	final static int NUM_TRAJECTORIES = Integer.MAX_VALUE;
 
-	//We use 1/4 available threads for parsing, and 1/4 for persisting trajectories
+	//We use 1/4 available threads for parsing the files, and 1/4 for persisting trajectories
 	//so this will use up 50% of available CPU resources.
 	final static int PARALLELISM = Runtime.getRuntime().availableProcessors() / 4;
 
 	//we create a transaction for each batch
-	@Value("${spring.jpa.properties.hibernate.jdbc.batch_size}")
+	@Value("128")
 	private int batchSize;
 
 	public static void main(String[] args) {
@@ -59,11 +59,11 @@ public class DataloaderApp implements CommandLineRunner {
 	private Flux<?> processPaths(Flux<Path> paths) {
 		return paths.parallel( PARALLELISM )
 				.runOn( Schedulers.parallel() )
-				.map( SimplePLTParser::new )
-				.map( SimplePLTParser::parse )
+				.map( PltParser::new )
+				.map( PltParser::parse )
 				.filter( Objects::nonNull )
 				.sequential()
-				.buffer( 128 )
+				.buffer( batchSize )
 				.parallel( PARALLELISM )
 				.runOn( Schedulers.parallel() )
 				.doOnNext( repository::saveAll )

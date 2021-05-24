@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,14 +21,14 @@ import org.geolatte.geom.crs.CoordinateReferenceSystems;
 
 import static java.lang.String.format;
 
-public class SimplePLTParser {
+public class PltParser {
 
 	final static CoordinateReferenceSystem<G2D> WGS84 = CoordinateReferenceSystems.WGS84;
 
-	Logger LOG = LoggerFactory.getLogger( SimplePLTParser.class );
+	Logger LOG = LoggerFactory.getLogger( PltParser.class );
 	final private Path path;
 
-	SimplePLTParser(Path path) {
+	PltParser(Path path) {
 		this.path = path;
 	}
 
