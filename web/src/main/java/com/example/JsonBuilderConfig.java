@@ -7,7 +7,6 @@ import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import org.geolatte.geom.json.GeolatteGeomModule;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 
 import static org.geolatte.geom.crs.CoordinateReferenceSystems.WGS84;

@@ -7,7 +7,7 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
+import org.geolatte.geom.G2D;
 import org.geolatte.geom.Geometry;
 import org.geolatte.geom.LineString;
 
@@ -19,16 +19,15 @@ public class Trajectory {
 	@GeneratedValue
 	private UUID id;
 
-	private Geometry<?> geometry;
+	private Geometry<G2D> geometry;
 
-	@JsonFormat(pattern = "yyyy-MM-dd hh:mm:ss")
 	private LocalDateTime start;
 
 	private Long durationInMinutes;
 
 	public Trajectory(){}
 
-	public Trajectory(LineString<?> lineString, LocalDateTime start, LocalDateTime stop, UUID trajectory) {
+	public Trajectory(LineString<G2D> lineString, LocalDateTime start, LocalDateTime stop, UUID trajectory) {
 		this.geometry = lineString;
 		this.start = start;
 		this.durationInMinutes = Duration.between( start, stop ).toMinutes();
