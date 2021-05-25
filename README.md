@@ -402,7 +402,7 @@ $ http GET http://localhost:9000/api/trajectories/00073325-0c68-4024-9d39-91b7fa
 It would be nice to actually see the trajectories on a map. So let's create a simple web map using the
 [OpenLayers](https://openlayers.org/) JavaScript framework. The result will look like this
 
-[TODO :: add link]
+![alt text](img/map.png "web map screenshot")
 
 The details of how the front-end is set up is beyond the scope of this tutorial. The source code for the web map is in
 the `/web/js/main.js` file and is sufficiently documented to understand what's happening.
