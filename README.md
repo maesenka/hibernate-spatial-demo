@@ -4,20 +4,22 @@ powerful [spatial data capabilities since the 20.2 release](https://www.cockroac
 extension for Postgresql (with some [caveats](https://www.cockroachlabs.com/docs/v20.2/spatial-data#compatibility)).
 Postgis is in my opinion the gold standard for spatial data management.
 
-Hibernate introduced in [version 5.4.30.Final](https://in.relation.to/2021/03/19/hibernate-orm-5430-final-release/) a
-spatial dialect for CockroachDB. This dialect supports the spatial features of CockroachDB. So your favorite ORM
-solution can now work as easily with spatial data as with ordinary, non-spatial data.
+I'm the maintainer of the `Hibernate-Spatial` module which extends Hibernate with spatial capabilities. Cockroach Labs asked me
+to write a spatial dialect so the spatial features of CockroachDB can be leveraged in Hibernate. This dialect was introduced 
+in [version 5.4.30.Final](https://in.relation.to/2021/03/19/hibernate-orm-5430-final-release/). 
 
-To demonstrate what this means we'll build two Spring Boot applications. First we'll create a CLI application that loads
-the GPS trajectory dataset from
+In t his blog post, I'll give you a flavor of how you can use the CockroachDB spatial dialect to build two Spring Boot 
+applications. First we'll create a CLI Dataloader application to load the GPS trajectory dataset from
 the [Geolife project](https://research.microsoft.com/en-us/downloads/b16d359d-d164-469e-9fd4-daa38f2b2e13/) in a
-CockroachDB table. Then we'll create a basic web mapping application that displays the trajectories on a map. The full
-source code
-is [available on GitHub](https://research.microsoft.com/en-us/downloads/b16d359d-d164-469e-9fd4-daa38f2b2e13).
+CockroachDB database. Then we'll create a REST API Trajectory service on top of this database with full CRUD functionality. 
+Finally we'll add a minimal web mapping application on top of that REST service so we can dynamically view the Trajectory  
+data on a map.
+
+The full source code for this blog post is [available on GitHub](https://github.com/maesenka/hibernate-spatial-demo).
 
 # The Dataloader
 
-The Geolife dataset consists of about 18000 GPS log files, each one representing a single trajectory. The Dataloader
+The Geolife dataset consists of about 18 000 GPS log files, each one representing a single trajectory. The Dataloader
 application will read each file, extract the GPS coordinates and timestamps, and create a `Trajectory` object from the
 data which is then persisted in a `trajectory` table in the database.
 
@@ -38,12 +40,14 @@ hibernate-spatial module. So we need to add this dependency to the POM ourselves
     </dependency>
 ```
 
-To finalize the setup of our project, we create the application.properties file
+To finalize the setup of our project, we create the application.properties file. We'll let Hibernate
+automatically create the required table objects for us (`spring.jpa.hibernatgge.ddl-auto=create')
 
 ```
 #It's not a web app 
 spring.main.web-application-type=NONE
 ...
+spring.jpa.hibernate.ddl-auto=create
 spring.jpa.properties.hibernate.dialect=org.hibernate.spatial.dialect.cockroachdb.CockroachDB202SpatialDialect
 spring.datasource.url=jdbc:postgresql://localhost:26257/defaultdb?sslmode=disable
 spring.datasource.username=root
@@ -55,17 +59,19 @@ default for your database.
 
 A `SpatialDialect` extends its base Dialect class by adding support for Geometry types, such as `Point`, `LineString` or
 `Polygon`. This means that Hibernate will handle the persistence of values of these types automatically. The spatial
-dialects also register a set of spatial functions so that you can use them in JPQL (or HQL) queries. There is more detail in Chapter 18 of
-the [Hibernate User Guide](https://docs.jboss.org/hibernate/orm/5.4/userguide/html_single/Hibernate_User_Guide.html#spatial).
+dialects also register a set of spatial functions so that you can use them in JPQL (or HQL) queries. There is more
+detail in Chapter 18 of
+the [Hibernate User Guide](https://docs.jboss.org/hibernate/orm/5.4/userguide/html_single/Hibernate_User_Guide.html#spatial)
+.
 
 In fact, Hibernate supports not one but two Geometry libraries:
 the [Java Topology Suite (JTS)](https://github.com/locationtech/jts) and
-[GeoLatte-Geom](https://github.com/geolatte/geolatte-geom). JTS is the oldest and most popular choice. It also is the
+[GeoLatte-Geom](https://github.com/geolatte/geolatte-geom). JTS is the oldest and most popular choice. It also sets the
 gold standard for its computational geometry algorithm (CGA) implementations in Java. GeoLatte-Geom is a more recent
-alternative with a more modern API design and a focus on support for the spatial data capabilities of modern databases.
+alternative that I created in parallel with Hibernate-Spatial. I felt the need for new Geometry library that is more aligned 
+with the spatial capabilities of modern databases.  
 
 In this tutorial we'll be using GeoLatte-Geom. The code on GitHub has a branch that uses JTS for those interested.
-
 
 Let's continue with the Dataloader application. To represent the trajectories, we create the following Entity class.
 
@@ -260,7 +266,8 @@ for which a SpatialDialect exists.
 
 # A spatial REST API
 
-Now that we have trajectory data in our database, let's create a REST application on top of this using [Spring Data REST](https://spring.io/projects/spring-data-rest).
+Now that we have trajectory data in our database, let's create a REST application on top of this
+using [Spring Data REST](https://spring.io/projects/spring-data-rest).
 
 Again using Spring Initializr we can create a maven project as a starting point. We now select "Spring Data JPA"
 and "Rest Repositories" as dependencies. Again we need to add `hibernate-spatial` as a depenceny. We will also add the
@@ -314,9 +321,8 @@ public interface TrajectoryRepository extends PagingAndSortingRepository<Traject
 }
 ```
 
-Let's start up the application and use [HTTPie](https://httpie.io/) to test
-the REST API on the command-line. As GeoJson is (very) verbose, we'll use [jq](https://stedolan.github.io/jq/) to
-transformt the GeoJson to something more concise.
+Let's start up the application and use [HTTPie](https://httpie.io/) to test the REST API on the command-line. As GeoJson
+is (very) verbose, we'll use [jq](https://stedolan.github.io/jq/) to transformt the GeoJson to something more concise.
 
 ```bash
 $ http GET http://localhost:9000/api/trajectories page==5 \
@@ -374,8 +380,8 @@ $ http GET http://localhost:9000/api/trajectories/00073325-0c68-4024-9d39-91b7fa
 }
 ```
 
-Spring Data REST also adds support for PUT and POST to update, resp. create Trajectory instances. To demonstrate that this
-works, let's change the duration attribute to 6 minutes for the trajectory we just retrieved.
+Spring Data REST also adds support for PUT and POST to update, resp. create Trajectory instances. To demonstrate that
+this works, let's change the duration attribute to 6 minutes for the trajectory we just retrieved.
 
 ```
 $  http GET http://localhost:9000/api/trajectories/00073325-0c68-4024-9d39-91b7fa632fcb \
@@ -398,15 +404,14 @@ It would be nice to actually see the trajectories on a map. So let's create a si
 
 [TODO :: add link]
 
-The details of how the front-end is set up is beyond the scope of this tutorial. The source code for the web map is in 
+The details of how the front-end is set up is beyond the scope of this tutorial. The source code for the web map is in
 the `/web/js/main.js` file and is sufficiently documented to understand what's happening.
 
-The most relevant JavaScript is shown below. The `trajectorySource` object is responsible for loading the trajectory data in the map
-every time that the map extent changes (that is what `strategy: bbox` means). It uses the `loader` function to fetch
-the trajectory data from the REST service. OpenLayers provides a `GeoJSON` class that we use
-to deserialize the GeoJson objects. The GeoJson object also projects the data from WGS84 (the CRS for the
-data returned by the REST service) to WEB_MERCATOR (identified by `EPSG:3857`) that is needed to 
-display the geometry on the map.
+The most relevant JavaScript is shown below. The `trajectorySource` object is responsible for loading the trajectory
+data in the map every time that the map extent changes (that is what `strategy: bbox` means). It uses the `loader`
+function to fetch the trajectory data from the REST service. OpenLayers provides a `GeoJSON` class that we use to
+deserialize the GeoJson objects. The GeoJson object also projects the data from WGS84 (the CRS for the data returned by
+the REST service) to WEB_MERCATOR (identified by `EPSG:3857`) that is needed to display the geometry on the map.
 
 ```javascript
 
@@ -442,7 +447,7 @@ const dataFetch = function (url) {
             if ( response.ok ) {
                 return response.json();
             }
-            ...
+        ...
         } )
         .then( data => {
                    let trajectoryData = data['_embedded']['trajectories'];
@@ -464,13 +469,14 @@ const dataFetch = function (url) {
 
 ```
 
-As you may have deduced from the code, assumes a `api/trajectories/search/bbox?bbox=<extent>` resource
-that accepts the  map extent as a parameter. How can we implement this in the backend?
+As you may have deduced from the code, assumes a `api/trajectories/search/bbox?bbox=<extent>` resource that accepts the
+map extent as a parameter. How can we implement this in the backend?
 
-First, we need to extend our `TrajectoryRepository` with the specialised `bbox()` custom search method. To this end
-we create the following interface
+First, we need to extend our `TrajectoryRepository` with the specialised `bbox()` custom search method. To this end we
+create the following interface
 
 ```java
+
 @Component
 public interface TrajectoryCustomRepository {
 
@@ -479,21 +485,22 @@ public interface TrajectoryCustomRepository {
 	 * @param bbox the bounding box as a String (minlon, minlat, maxlon, maxlat)
 	 * @return the {@code Trajectory}s that overlap with the specified bounding box
 	 */
-	@RestResource(path="bbox")
+	@RestResource(path = "bbox")
 	List<Trajectory> bbox(String bbox);
 
 }
 ```
-We must also have the `TrajectoryRepository` extend this interface. 
+
+We must also have the `TrajectoryRepository` extend this interface.
 
 ```java
-public interface TrajectoryRepository extends 
-        PagingAndSortingRepository<Trajectory, UUID>,
-	TrajectoryCustomRepository {}
+public interface TrajectoryRepository extends
+		PagingAndSortingRepository<Trajectory, UUID>,
+		TrajectoryCustomRepository {
+}
 ```
 
-Since we're using
-a Spatial Dialect, we can use JPQL to implement the `bbox()` method.
+Since we're using a Spatial Dialect, we can use JPQL to implement the `bbox()` method.
 
 ```java
 public class TrajectoryCustomRepositoryImpl implements TrajectoryCustomRepository {
@@ -514,19 +521,19 @@ public class TrajectoryCustomRepositoryImpl implements TrajectoryCustomRepositor
 }
 ``` 
 
-The `filter()` function in the JPQL query is provided by the CockroachDB spatial dialect. Hibernate
-will translate this approximately to the following SQL query that uses the `&&` spatial operator.
+The `filter()` function in the JPQL query is provided by the CockroachDB spatial dialect. Hibernate will translate this
+approximately to the following SQL query that uses the `&&` spatial operator.
 
 ```sql
-select t.* from trajectory t where (t.geometry && ?)=true
+select t.*
+from trajectory t
+where (t.geometry && ?) = true
 ```
 
-And that is all we have to do. We now have a REST service for trajectories that offers CRUD functionality, plus
-bounding box searches to power a dynamic map front-end.
+And that is all we have to do. We now have a REST service for trajectories that offers CRUD functionality, plus bounding
+box searches to power a dynamic map front-end.
 
-
-Now if we run this the first time, we get
-If we run this the first time, we get this error.
+Now if we run this the first time, we get If we run this the first time, we get this error.
 
 ```
 org.postgresql.util.PSQLException: ERROR: this box2d comparison operator is experimental
@@ -543,13 +550,12 @@ EOF
 "
 ```
 
-Beware, there are serious limitations to this implementation. First there are no limits set on
-the result size. As it happens, most of the trajectories were registered in and around Beijing. So if you set the map extent 
-to Beijing, then most of the dataset will get
-serialized to Json and sent to your browser. This might crash your browser, if the REST service process doesn't throw
-an OutOfMemoryError first.
+Beware, there are serious limitations to this implementation. First there are no limits set on the result size. As it
+happens, most of the trajectories were registered in and around Beijing. So if you set the map extent to Beijing, then
+most of the dataset will get serialized to Json and sent to your browser. This might crash your browser, if the REST
+service process doesn't throw an OutOfMemoryError first.
 
 There are ways around this depending on your use case. You might set an arbitrary limit of the features to send, or use
-the zoom-level to choose what to send to the browser. Another important strategy to deal with this issue is to make the REST service
-reactive. In this way the features will be streamed to the client as they become available from the 
+the zoom-level to choose what to send to the browser. Another important strategy to deal with this issue is to make the
+REST service reactive. In this way the features will be streamed to the client as they become available from the
 database. How to do this with Hibenate and Spring Boot is the subject for another tutorial.
