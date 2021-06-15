@@ -285,8 +285,8 @@ and "Rest Repositories" as dependencies. Again we need to add `hibernate-spatial
 
 The `Trajectory` entity class is the same as above, except we also add getters for the member variables.
 
-To create a basic Json REST service supporting creating, updating and retrieving trajectories, we only need to create
-a `Repository`, and make sure the Jackson can (de)serialize `Trajectory` entities.
+To create a basic Json REST service for creating, updating and retrieving trajectories, we only need to create
+a `Repository` and make sure that Jackson can (de)serialize `Trajectory` entities.
 
 The Json serialization can be handled by a custom Json builder
 
@@ -322,6 +322,11 @@ Let's start up the application and use [HTTPie](https://httpie.io/) to test the 
 is (very) verbose, we'll use [jq](https://stedolan.github.io/jq/) to transformt the GeoJson to something more concise.
 
 ```bash
+$ mvn package
+$ java -jar target/route-analyser-0.0.1-SNAPSHOT.jar
+
+...
+
 $ http GET http://localhost:9000/api/trajectories page==5 \
   | jq '._embedded.trajectories[] | {duration: .durationInMinutes, url: ._links.self.href}'
 {
@@ -346,7 +351,7 @@ $ http GET http://localhost:9000/api/trajectories page==5 \
 }
 ```
 
-The JQ expression we used iterates over each Trajectory JSON object, and maps it to an object with only the duration,
+The `jq` expression we used above iterates over each Trajectory JSON object, and maps it to an object with only the duration,
 and the link
 
 Now let's inspect the shortest trajectory.
@@ -403,6 +408,8 @@ It would be nice to actually see the trajectories on a map. So let's create a si
 
 The details of how the front-end is set up is beyond the scope of this tutorial. The source code for the web map is in
 the `/web/js/main.js` file and is sufficiently documented to understand what's happening.
+
+The client code in the `js` folder uses webpack. 
 
 The most relevant JavaScript is shown below. The `trajectorySource` object is responsible for loading the trajectory
 data in the map every time that the map extent changes (that is what `strategy: bbox` means). It uses the `loader`
