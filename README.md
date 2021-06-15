@@ -1,14 +1,12 @@
-CockroachDB has gained
-powerful [spatial data capabilities since the 20.2 release](https://www.cockroachlabs.com/blog/how-we-built-spatial-indexing/)
-. One of the great things about this is that the spatial features are compatible with the excellent PostGIS spatial data
-extension for Postgresql (with some [caveats](https://www.cockroachlabs.com/docs/v20.2/spatial-data#compatibility)).
-Postgis is in my opinion the gold standard for spatial data management.
 
-I'm the maintainer of the `Hibernate-Spatial` module which extends Hibernate with spatial capabilities. Cockroach Labs asked me
-to write a spatial dialect so the spatial features of CockroachDB can be leveraged in Hibernate. This dialect was introduced 
+CockroachDB has gained powerful [spatial data capabilities since the 20.2 release](https://www.cockroachlabs.com/blog/how-we-built-spatial-indexing/). One of the great things about this is that the spatial features are compatible with the excellent PostGIS spatial data
+extension for Postgresql (with some [caveats](https://www.cockroachlabs.com/docs/v20.2/spatial-data#compatibility)), which in my opinion is the gold standard for spatial data management.
+
+I'm the maintainer of `Hibernate-Spatial`. An optional module which extends Hibernate with spatial capabilities. I was asked by Cockroach Labs 
+to write a spatial dialect for CockroachDB. This dialect was introduced 
 in [version 5.4.30.Final](https://in.relation.to/2021/03/19/hibernate-orm-5430-final-release/). 
 
-In t his blog post, I'll give you a flavor of how you can use the CockroachDB spatial dialect to build two Spring Boot 
+In this blog post, I'll give you a flavor of how you can use the CockroachDB spatial dialect by building two Spring Boot 
 applications. First we'll create a CLI Dataloader application to load the GPS trajectory dataset from
 the [Geolife project](https://research.microsoft.com/en-us/downloads/b16d359d-d164-469e-9fd4-daa38f2b2e13/) in a
 CockroachDB database. Then we'll create a REST API Trajectory service on top of this database with full CRUD functionality. 
@@ -41,7 +39,7 @@ hibernate-spatial module. So we need to add this dependency to the POM ourselves
 ```
 
 To finalize the setup of our project, we create the application.properties file. We'll let Hibernate
-automatically create the required table objects for us (`spring.jpa.hibernatgge.ddl-auto=create')
+automatically create the required table objects for us (`spring.jpa.hibernatgge.ddl-auto=create`)
 
 ```
 #It's not a web app 
@@ -57,17 +55,16 @@ spring.datasource.password=
 Note that we need to set the dialect explicitly. If we didn't do this, Spring Boot will choose a non-spatial dialect by
 default for your database.
 
-A `SpatialDialect` extends its base Dialect class by adding support for Geometry types, such as `Point`, `LineString` or
+A `SpatialDialect` extends its base `Dialect` class by adding support for Geometry types, such as `Point`, `LineString` or
 `Polygon`. This means that Hibernate will handle the persistence of values of these types automatically. The spatial
 dialects also register a set of spatial functions so that you can use them in JPQL (or HQL) queries. There is more
 detail in Chapter 18 of
-the [Hibernate User Guide](https://docs.jboss.org/hibernate/orm/5.4/userguide/html_single/Hibernate_User_Guide.html#spatial)
-.
+the [Hibernate User Guide](https://docs.jboss.org/hibernate/orm/5.4/userguide/html_single/Hibernate_User_Guide.html#spatial).
 
 In fact, Hibernate supports not one but two Geometry libraries:
 the [Java Topology Suite (JTS)](https://github.com/locationtech/jts) and
 [GeoLatte-Geom](https://github.com/geolatte/geolatte-geom). JTS is the oldest and most popular choice. It also sets the
-gold standard for its computational geometry algorithm (CGA) implementations in Java. GeoLatte-Geom is a more recent
+gold standard for computational geometry algorithm (CGA) implementations in Java. GeoLatte-Geom is a more recent
 alternative that I created in parallel with Hibernate-Spatial. I felt the need for new Geometry library that is more aligned 
 with the spatial capabilities of modern databases.  
 
@@ -181,7 +178,7 @@ a `Trajectory` object.
 
 Finally, we complete the Dataloader by walking over the files in the data directory, parse each file and store the
 resulting `Trajectory` in the database. To make this a bit more interesting we'll use
-[Reactor](https://projectreactor.io/) to do this the in parallel.
+[Reactor](https://projectreactor.io/) to parallelize both the parse and the database store operations.
 
 The core logic of the Dataloader is the `processPaths` method. It takes as argument a stream of `Path`s and parses the
 files in parallel. The results are merged to a single stream, which is then buffered in batches of 64 trajectories.
@@ -207,7 +204,7 @@ Let's see it in operation:
 
 ```bash
 $ mvn package
-$ java -jar java -jar target/dataloader-0.0.1-SNAPSHOT.jar $GEOLIFE_DATA_DIRECTORY
+$ java -jar target/dataloader-0.0.1-SNAPSHOT.jar $GEOLIFE_DATA_DIRECTORY
 .   ____          _            __ _ _
  /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
 ( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
@@ -252,17 +249,17 @@ defaultdb=# select count(*) from trajectory;
 ```
 
 We've read 18760 data files, parsed them and stored them in a database in less than 7 seconds making full use of the
-available cores.
+available cores (admittedly on a rather beefy machine).
 
-Using Hibernate has another advantage. If you change the application.properties to e.g.
+Using Hibernate makes it possible to create applications that are portable across databases (within limits, of course). 
+
+For example, if you change the application.properties as show below, we can now target a postgresql database without any code changes.
 
 ```
 spring.jpa.properties.hibernate.dialect=org.hibernate.spatial.dialect.postgis.PostgisPG95Dialect
 spring.datasource.url=jdbc:postgresql://localhost/hibernate_orm_test
 ```
-
-We can use the exact same code to target a different database. In fact, the code as written will work on any database
-for which a SpatialDialect exists.
+In fact, the code as written will work on any database for which a SpatialDialect exists.
 
 # A spatial REST API
 
