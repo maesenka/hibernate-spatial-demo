@@ -182,7 +182,7 @@ resulting `Trajectory` in the database. To make this a bit more interesting we'l
 
 The core logic of the Dataloader is the `processPaths` method. It takes as argument a stream of `Path`s and parses the
 files in parallel. The results are merged to a single stream, which is then buffered in batches of 64 trajectories.
-These batches are then in parallel persisted to the Cockroach database.
+These batches are then in parallel persisted to the CockroachDB database.
 
 ```java
     private Flux<?> processPaths(Flux<Path> paths){
@@ -578,5 +578,5 @@ most of the dataset will get serialized to Json and sent to your browser. This m
 service process doesn't throw an OutOfMemoryError first.
 
 There are ways around this depending on your use case. You might set an arbitrary limit on the number of features to send, for example. Another
-important strategy to deal with this issue is to make the REST service reactive. In this way the features will be streamed to the client as they
-become available from the database. How to do this with Hibenate and Spring Boot is the subject for another tutorial.
+important strategy to deal with this issue is to make the REST service reactive. Features will then be streamed to the client as they
+become available from the database. How to do this with Hibenate and Spring Boot, however, is the subject for another tutorial.
