@@ -466,7 +466,7 @@ const dataFetch = function (url) {
 
 ```
 
-As you may have deduced from the code, assumes a `api/trajectories/search/bbox?bbox=<extent>` resource that accepts the
+As you may have deduced from the code, the client assumes a `api/trajectories/search/bbox?bbox=<extent>` resource that accepts the
 map extent as a parameter. How can we implement this in the backend?
 
 First, we need to extend our `TrajectoryRepository` with the specialised `bbox()` custom search method. To this end we
