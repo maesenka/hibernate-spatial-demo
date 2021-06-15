@@ -24,7 +24,7 @@ data which is then persisted in a `trajectory` table in the database.
 Our database is (of course) CockroachDB. For this demo we will use a single instance docker configuration.
 
 ```
-$ docker run -d --name=cockroach -p 26257:26257 -p 8080:8080 cockroachdb/cockroach:v21.1.0 start-single-node --insecure
+$ docker run -d --name=cockroach -p 26257:26257 -p 8080:8080 cockroachdb/cockroach:v21.1.2 start-single-node --insecure
 ```
 
 To create our application, we use the [Spring initializr](https://start.spring.io/) for maven and select the Spring Data
@@ -409,9 +409,19 @@ It would be nice to actually see the trajectories on a map. So let's create a si
 The details of how the front-end is set up is beyond the scope of this tutorial. The source code for the web map is in
 the `/web/js/main.js` file and is sufficiently documented to understand what's happening.
 
-The client code in the `js` folder uses webpack. 
+The client code in the `js` folder uses webpack. To build the client, we do
 
-The most relevant JavaScript is shown below. The `trajectorySource` object is responsible for loading the trajectory
+```
+$ cd js 
+$ npm install
+# npm run build
+
+```
+
+This will build the webclient and copy it to the `src/main/resources/static` directory. This ensure that after building
+the application jar and running it, the web map will be served as a static resource file.
+
+The most important part of the client code is shown below. The `trajectorySource` object is responsible for loading the trajectory
 data in the map every time that the map extent changes (that is what `strategy: bbox` means). It uses the `loader`
 function to fetch the trajectory data from the REST service. OpenLayers provides a `GeoJSON` class that we use to
 deserialize the GeoJson objects. The GeoJson object also projects the data from WGS84 (the CRS for the data returned by
@@ -537,7 +547,16 @@ where (t.geometry && ?) = true
 And that is all we have to do. We now have a REST service for trajectories that offers CRUD functionality, plus bounding
 box searches to power a dynamic map front-end.
 
-Now if we run this the first time, we get If we run this the first time, we get this error.
+Build and run it:
+
+```bash
+$ mvn package
+$ java -jar target/route-analyser-0.0.1-SNAPSHOT.jar
+```
+
+And point your browser to `http://localhost:9000`
+
+Now if we run this the first time, we get this error.
 
 ```
 org.postgresql.util.PSQLException: ERROR: this box2d comparison operator is experimental
@@ -550,8 +569,7 @@ So we do as we are told.
 docker exec -it cockroach bash -c "cat <<EOF | ./cockroach sql --insecure
 SET CLUSTER SETTING sql.spatial.experimental_box2d_comparison_operators.enabled = on;
 quit
-EOF
-"
+EOF"
 ```
 
 Beware, there are serious limitations to this implementation. First there are no limits set on the result size. As it
@@ -559,7 +577,6 @@ happens, most of the trajectories were registered in and around Beijing. So if y
 most of the dataset will get serialized to Json and sent to your browser. This might crash your browser, if the REST
 service process doesn't throw an OutOfMemoryError first.
 
-There are ways around this depending on your use case. You might set an arbitrary limit of the features to send, or use
-the zoom-level to choose what to send to the browser. Another important strategy to deal with this issue is to make the
-REST service reactive. In this way the features will be streamed to the client as they become available from the
-database. How to do this with Hibenate and Spring Boot is the subject for another tutorial.
+There are ways around this depending on your use case. You might set an arbitrary limit on the number of features to send, for example. Another
+important strategy to deal with this issue is to make the REST service reactive. In this way the features will be streamed to the client as they
+become available from the database. How to do this with Hibenate and Spring Boot is the subject for another tutorial.
