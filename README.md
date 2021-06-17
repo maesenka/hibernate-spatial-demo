@@ -1,16 +1,16 @@
 
 CockroachDB has gained powerful [spatial data capabilities since the 20.2 release](https://www.cockroachlabs.com/blog/how-we-built-spatial-indexing/). One of the great things about this is that the spatial features are compatible with the excellent PostGIS spatial data
-extension for PostgreSQL (with some [caveats](https://www.cockroachlabs.com/docs/v20.2/spatial-data#compatibility)), which in my opinion is the gold standard for spatial data management.
+extension for PostgreSQL (with some [caveats](https://www.cockroachlabs.com/docs/v20.2/spatial-data#compatibility)).  In my opinion, PostGIS is the gold standard for spatial data management.
 
-I'm the maintainer of `Hibernate-Spatial`. An optional module which extends Hibernate with spatial capabilities. I was asked by Cockroach Labs 
+I'm the maintainer of `Hibernate-Spatial`: an optional module which extends Hibernate with spatial capabilities. I was asked by Cockroach Labs 
 to write a spatial dialect for CockroachDB. This dialect was introduced 
 in [version 5.4.30.Final](https://in.relation.to/2021/03/19/hibernate-orm-5430-final-release/). 
 
 In this blog post, I'll give you a flavor of how you can use the CockroachDB spatial dialect by building two Spring Boot 
 applications. First we'll create a CLI Dataloader application to load the GPS trajectory dataset from
-the [Geolife project](https://research.microsoft.com/en-us/downloads/b16d359d-d164-469e-9fd4-daa38f2b2e13/) in a
-CockroachDB database. Then we'll create a REST API Trajectory service on top of this database with full CRUD functionality. 
-Finally we'll add a minimal web mapping application on top of that REST service so we can dynamically view the Trajectory 
+the [Geolife project](https://research.microsoft.com/en-us/downloads/b16d359d-d164-469e-9fd4-daa38f2b2e13/) into
+CockroachDB. Then we'll create a REST API Trajectory service on top of this database with full CRUD functionality. 
+Finally, we'll add a minimal web mapping application on top of that REST service so we can dynamically view the Trajectory 
 data on a map.
 
 The full source code for this blog post is [available on GitHub](https://github.com/maesenka/hibernate-spatial-demo).
@@ -27,9 +27,9 @@ Our database is (of course) CockroachDB. For this demo we will use a single inst
 $ docker run -d --name=cockroach -p 26257:26257 -p 8080:8080 cockroachdb/cockroach:v21.1.2 start-single-node --insecure
 ```
 
-To create our application, we use the [Spring initializer](https://start.spring.io/) for maven and select the Spring Data
-JPA dependency. This will bring in Hibernate as a dependency. The spatial dialects are packaged in the optional
-hibernate-spatial module. So we need to add this dependency to the POM ourselves.
+To create our application, we use the [Spring initializer](https://start.spring.io/) for Maven and select the Spring Data
+JPA dependency. This will bring in Hibernate as a dependency as well. The spatial dialects are packaged in the optional
+`hibernate-spatial` module, so we need to add this dependency to the POM ourselves.
 
 ```xml
     <dependency>
@@ -38,8 +38,8 @@ hibernate-spatial module. So we need to add this dependency to the POM ourselves
     </dependency>
 ```
 
-To finalize the setup of our project, we create the application.properties file. We'll let Hibernate
-automatically create the required table objects for us (`spring.jpa.hibernatgge.ddl-auto=create`)
+To finalize the setup of our project, we create the `application.properties` file. We'll let Hibernate
+automatically create the required table objects for us (`spring.jpa.hibernatgge.ddl-auto=create`).
 
 ```
 # It's not a web app .
@@ -52,8 +52,8 @@ spring.datasource.username=root
 spring.datasource.password=
 ```
 
-Note that we need to set the dialect explicitly. If we didn't do this, Spring Boot will choose a non-spatial dialect by
-default for your database.
+Note that we need to set the dialect explicitly. If we didn't do this, Spring Boot would choose a non-spatial dialect by
+default for the database.
 
 A `SpatialDialect` extends its base `Dialect` class by adding support for Geometry types, such as `Point`, `LineString` or
 `Polygon`. This means that Hibernate will handle the persistence of values of these types automatically. The spatial
@@ -65,8 +65,8 @@ In fact, Hibernate supports not one but two Geometry libraries:
 the [Java Topology Suite (JTS)](https://github.com/locationtech/jts) and
 [GeoLatte-Geom](https://github.com/geolatte/geolatte-geom). JTS is the oldest and most popular choice. It also sets the
 gold standard for computational geometry algorithm (CGA) implementations in Java. GeoLatte-Geom is a more recent
-alternative that I created in parallel with Hibernate-Spatial. I felt the need for new Geometry library that is more aligned 
-with the spatial capabilities of modern databases.  
+alternative that I created in parallel with Hibernate-Spatial. I felt the need for a new Geometry library that is more aligned 
+with the spatial capabilities of modern databases.
 
 In this tutorial we'll be using GeoLatte-Geom. The code on GitHub has a branch that uses JTS for those interested.
 
@@ -171,18 +171,18 @@ public class PltParser {
 }
 ```
 
-The `PltParser` reads the data lines and extracts the longitude, latitude and timestamp in to a helper
+The `PltParser` reads the data lines and extracts the longitude, latitude and timestamp into a helper
 `TimeStampedCoordinate` object (not shown). The coordinates of each `TimestampedCoordinate` are then collected in
 a `PositionSequenceBuilder`, and the timestamps in a `List`. The `buildTrajectory()` method turns these into
 a `Trajectory` object.
 
-Finally, we complete the Dataloader by walking over the files in the data directory, parse each file and store the
+Finally, we complete the Dataloader by walking over the files in the data directory, parsing each file, and storing the
 resulting `Trajectory` in the database. To make this a bit more interesting we'll use
 [Reactor](https://projectreactor.io/) to parallelize both the parse and the database store operations.
 
 The core logic of the Dataloader is the `processPaths` method. It takes as argument a stream of `Path`s and parses the
 files in parallel. The results are merged to a single stream, which is then buffered in batches of 64 trajectories.
-These batches are then in parallel persisted to the CockroachDB database.
+These batches are then  persisted in parallel to CockroachDB.
 
 ```java
     private Flux<?> processPaths(Flux<Path> paths){
@@ -251,14 +251,15 @@ defaultdb=# select count(*) from trajectory;
 We've read 18760 data files, parsed them and stored them in a database in less than 7 seconds making full use of the
 available cores (admittedly on a rather beefy machine).
 
-Using Hibernate makes it possible to create applications that are portable across databases (within limits, of course). 
+Using Hibernate makes it possible to create applications that are portable across databases (within limits, of course).
 
-For example, if you change the application.properties as show below, we can now target a postgresql database without any code changes.
+For example, if you change the `application.properties` file as shown below, you can target a PostgreSQL database without any code changes.
 
 ```
 spring.jpa.properties.hibernate.dialect=org.hibernate.spatial.dialect.postgis.PostgisPG95Dialect
 spring.datasource.url=jdbc:postgresql://localhost/hibernate_orm_test
 ```
+
 In fact, the code as written will work on any database for which a SpatialDialect exists.
 
 # A spatial REST API
@@ -266,8 +267,8 @@ In fact, the code as written will work on any database for which a SpatialDialec
 Now that we have trajectory data in our database, let's create a REST application on top of this
 using [Spring Data REST](https://spring.io/projects/spring-data-rest).
 
-Again using Spring Initializr we can create a maven project as a starting point. We now select "Spring Data JPA"
-and "Rest Repositories" as dependencies. Again we need to add `hibernate-spatial` as a depenceny. We will also add the
+Again using Spring Initializr, we can create a Maven project as a starting point. We now select "Spring Data JPA"
+and "Rest Repositories" as dependencies. Again we need to add `hibernate-spatial` as a dependency. We will also add the
 `geolatte-geojson` library as a dependency for serializing Geometries to [GeoJJSON](https://geojson.org/).
 
 ```xml
@@ -308,7 +309,7 @@ This adds the `GeolatteGeomModule` which will take care of serializing the Traje
 configure Jackson to properly write the Trajectory start timestamps as ISO formatted Strings.
 
 As for the repository, we only need to declare our Repository interface as a `PagingAndSortingRepository` and Spring
-Data REST will generate the data access logic, and the REST controllers automatically.
+Data REST will generate the data access logic and the REST controllers automatically.
 
 ```java
 public interface TrajectoryRepository extends PagingAndSortingRepository<Trajectory, UUID> {
@@ -379,7 +380,7 @@ $ http GET http://localhost:9000/api/trajectories/00073325-0c68-4024-9d39-91b7fa
 }
 ```
 
-Spring Data REST also adds support for PUT and POST to update, resp. create Trajectory instances. To demonstrate that
+Spring Data REST also adds support for `PUT` and `POST` to update and create Trajectory instances. To demonstrate that
 this works, let's change the duration attribute to 6 minutes for the trajectory we just retrieved.
 
 ```bash
@@ -399,7 +400,7 @@ $ http GET http://localhost:9000/api/trajectories/00073325-0c68-4024-9d39-91b7fa
 # A dynamic Trajectories map
 
 It would be nice to actually see the trajectories on a map. So let's create a simple web map using the
-[OpenLayers](https://openlayers.org/) JavaScript framework. The result will look like this
+[OpenLayers](https://openlayers.org/) JavaScript framework. The result will look like this:
 
 ![alt text](img/map.png "web map screenshot")
 
@@ -414,14 +415,14 @@ $ npm install
 # npm run build
 ```
 
-This will build the webclient and copy it to the `src/main/resources/static` directory. This ensure that after building
-the application jar and running it, the web map will be served as a static resource file.
+This will build the webclient and copy it to the `src/main/resources/static` directory. This ensures that after building
+the application JAR and running it, the web map will be served as a static resource file.
 
 The most important part of the client code is shown below. The `trajectorySource` object is responsible for loading the trajectory
 data in the map every time that the map extent changes (that is what `strategy: bbox` means). It uses the `loader`
 function to fetch the trajectory data from the REST service. OpenLayers provides a `GeoJSON` class that we use to
 deserialize the GeoJSON objects. The GeoJSON object also projects the data from WGS84 (the CRS for the data returned by
-the REST service) to WEB_MERCATOR (identified by `EPSG:3857`) that is needed to display the geometry on the map.
+the REST service) to WEB_MERCATOR (identified by `EPSG:3857`), which is needed to display the geometry on the map.
 
 ```javascript
 const format = new GeoJSON( {dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857'} );
@@ -482,7 +483,7 @@ As you may have deduced from the code, the client assumes a `api/trajectories/se
 map extent as a parameter. How can we implement this in the backend?
 
 First, we need to extend our `TrajectoryRepository` with the specialised `bbox()` custom search method. To this end we
-create the following interface
+create the following interface:
 
 ```java
 @Component
@@ -499,7 +500,7 @@ public interface TrajectoryCustomRepository {
 }
 ```
 
-We must also have the `TrajectoryRepository` extend this interface.
+We must also have the `TrajectoryRepository` extend this interface:
 
 ```java
 public interface TrajectoryRepository extends
@@ -530,7 +531,7 @@ public class TrajectoryCustomRepositoryImpl implements TrajectoryCustomRepositor
 ``` 
 
 The `filter()` function in the JPQL query is provided by the CockroachDB spatial dialect. Hibernate will translate this
-approximately to the following SQL query that uses the `&&` spatial operator.
+to approximately the following SQL query that uses the `&&` spatial operator:
 
 ```sql
 select t.*
@@ -550,14 +551,14 @@ $ java -jar target/route-analyser-0.0.1-SNAPSHOT.jar
 
 And point your browser to `http://localhost:9000`.
 
-Now if we run this the first time, we get this error.
+Now if we run this the first time, we get this error:
 
 ```
 org.postgresql.util.PSQLException: ERROR: this box2d comparison operator is experimental
   Hint: To enable box2d comparators, use `SET CLUSTER SETTING sql.spatial.experimental_box2d_comparison_operators.enabled = on`.
 ```
 
-So we do as we are told.
+So we do as we are told:
 
 ```bash
 $ docker exec -it cockroach bash -c "cat <<EOF | ./cockroach sql --insecure
@@ -569,8 +570,8 @@ EOF"
 Beware, there are serious limitations to this implementation. First there are no limits set on the result size. As it
 happens, most of the trajectories were registered in and around Beijing. So if you set the map extent to Beijing, then
 most of the dataset will get serialized to JSON and sent to your browser. This might crash your browser, if the REST
-service process doesn't throw an OutOfMemoryError first.
+service process doesn't throw an `OutOfMemoryError` first.
 
 There are ways around this depending on your use case. You might set an arbitrary limit on the number of features to send, for example. Another
 important strategy to deal with this issue is to make the REST service reactive. Features will then be streamed to the client as they
-become available from the database. How to do this with Hibenate and Spring Boot, however, is the subject for another tutorial.
+become available from the database. How to do this with Hibenate and Spring Boot is the subject for another tutorial, however.
