@@ -1,6 +1,6 @@
 
 CockroachDB has gained powerful [spatial data capabilities since the 20.2 release](https://www.cockroachlabs.com/blog/how-we-built-spatial-indexing/). One of the great things about this is that the spatial features are compatible with the excellent PostGIS spatial data
-extension for Postgresql (with some [caveats](https://www.cockroachlabs.com/docs/v20.2/spatial-data#compatibility)), which in my opinion is the gold standard for spatial data management.
+extension for PostgreSQL (with some [caveats](https://www.cockroachlabs.com/docs/v20.2/spatial-data#compatibility)), which in my opinion is the gold standard for spatial data management.
 
 I'm the maintainer of `Hibernate-Spatial`. An optional module which extends Hibernate with spatial capabilities. I was asked by Cockroach Labs 
 to write a spatial dialect for CockroachDB. This dialect was introduced 
@@ -10,7 +10,7 @@ In this blog post, I'll give you a flavor of how you can use the CockroachDB spa
 applications. First we'll create a CLI Dataloader application to load the GPS trajectory dataset from
 the [Geolife project](https://research.microsoft.com/en-us/downloads/b16d359d-d164-469e-9fd4-daa38f2b2e13/) in a
 CockroachDB database. Then we'll create a REST API Trajectory service on top of this database with full CRUD functionality. 
-Finally we'll add a minimal web mapping application on top of that REST service so we can dynamically view the Trajectory  
+Finally we'll add a minimal web mapping application on top of that REST service so we can dynamically view the Trajectory 
 data on a map.
 
 The full source code for this blog post is [available on GitHub](https://github.com/maesenka/hibernate-spatial-demo).
@@ -27,11 +27,11 @@ Our database is (of course) CockroachDB. For this demo we will use a single inst
 $ docker run -d --name=cockroach -p 26257:26257 -p 8080:8080 cockroachdb/cockroach:v21.1.2 start-single-node --insecure
 ```
 
-To create our application, we use the [Spring initializr](https://start.spring.io/) for maven and select the Spring Data
+To create our application, we use the [Spring initializer](https://start.spring.io/) for maven and select the Spring Data
 JPA dependency. This will bring in Hibernate as a dependency. The spatial dialects are packaged in the optional
 hibernate-spatial module. So we need to add this dependency to the POM ourselves.
 
-```
+```xml
     <dependency>
       <groupId>org.hibernate</groupId>
       <artifactId>hibernate-spatial</artifactId>
@@ -42,7 +42,7 @@ To finalize the setup of our project, we create the application.properties file.
 automatically create the required table objects for us (`spring.jpa.hibernatgge.ddl-auto=create`)
 
 ```
-#It's not a web app 
+# It's not a web app .
 spring.main.web-application-type=NONE
 ...
 spring.jpa.hibernate.ddl-auto=create
@@ -268,9 +268,9 @@ using [Spring Data REST](https://spring.io/projects/spring-data-rest).
 
 Again using Spring Initializr we can create a maven project as a starting point. We now select "Spring Data JPA"
 and "Rest Repositories" as dependencies. Again we need to add `hibernate-spatial` as a depenceny. We will also add the
-`geolatte-geojson` library as a dependency for serializing Geometries to [GeoJson](https://geojson.org/).
+`geolatte-geojson` library as a dependency for serializing Geometries to [GeoJJSON](https://geojson.org/).
 
-```         
+```xml
 		<dependency>
 			<groupId>org.hibernate</groupId>
 			<artifactId>hibernate-spatial</artifactId>
@@ -280,15 +280,14 @@ and "Rest Repositories" as dependencies. Again we need to add `hibernate-spatial
 			<artifactId>geolatte-geojson</artifactId>
 			<version>1.8.0</version>
 		</dependency>
-
 ```
 
 The `Trajectory` entity class is the same as above, except we also add getters for the member variables.
 
-To create a basic Json REST service for creating, updating and retrieving trajectories, we only need to create
+To create a basic JSON REST service for creating, updating and retrieving trajectories, we only need to create
 a `Repository` and make sure that Jackson can (de)serialize `Trajectory` entities.
 
-The Json serialization can be handled by a custom Json builder
+The JSON serialization can be handled by a custom JSON builder:
 
 ```java
 
@@ -312,14 +311,13 @@ As for the repository, we only need to declare our Repository interface as a `Pa
 Data REST will generate the data access logic, and the REST controllers automatically.
 
 ```java
-
 public interface TrajectoryRepository extends PagingAndSortingRepository<Trajectory, UUID> {
 
 }
 ```
 
-Let's start up the application and use [HTTPie](https://httpie.io/) to test the REST API on the command-line. As GeoJson
-is (very) verbose, we'll use [jq](https://stedolan.github.io/jq/) to transformt the GeoJson to something more concise.
+Let's start up the application and use [HTTPie](https://httpie.io/) to test the REST API on the command-line. As GeoJSON
+is (very) verbose, we'll use [jq](https://stedolan.github.io/jq/) to transform the GeoJSON to something more concise.
 
 ```bash
 $ mvn package
@@ -352,11 +350,11 @@ $ http GET http://localhost:9000/api/trajectories page==5 \
 ```
 
 The `jq` expression we used above iterates over each Trajectory JSON object, and maps it to an object with only the duration,
-and the link
+and the link << sentence incomplete >>.
 
 Now let's inspect the shortest trajectory.
 
-```
+```bash
 $ http GET http://localhost:9000/api/trajectories/00073325-0c68-4024-9d39-91b7fa632fcb
 {
   "geometry" : {
@@ -385,7 +383,7 @@ $ http GET http://localhost:9000/api/trajectories/00073325-0c68-4024-9d39-91b7fa
 Spring Data REST also adds support for PUT and POST to update, resp. create Trajectory instances. To demonstrate that
 this works, let's change the duration attribute to 6 minutes for the trajectory we just retrieved.
 
-```
+```bash
 $  http GET http://localhost:9000/api/trajectories/00073325-0c68-4024-9d39-91b7fa632fcb \
    | sed -e 's/"durationInMinutes" : 5/"durationInMinutes" : 6/' \
    | http PUT http://localhost:9000/api/trajectories/00073325-0c68-4024-9d39-91b7fa632fcb
@@ -411,11 +409,10 @@ the `/web/js/main.js` file and is sufficiently documented to understand what's h
 
 The client code in the `js` folder uses webpack. To build the client, we do
 
-```
+```bash
 $ cd js 
 $ npm install
 # npm run build
-
 ```
 
 This will build the webclient and copy it to the `src/main/resources/static` directory. This ensure that after building
@@ -424,11 +421,10 @@ the application jar and running it, the web map will be served as a static resou
 The most important part of the client code is shown below. The `trajectorySource` object is responsible for loading the trajectory
 data in the map every time that the map extent changes (that is what `strategy: bbox` means). It uses the `loader`
 function to fetch the trajectory data from the REST service. OpenLayers provides a `GeoJSON` class that we use to
-deserialize the GeoJson objects. The GeoJson object also projects the data from WGS84 (the CRS for the data returned by
+deserialize the GeoJSON objects. The GeoJSON object also projects the data from WGS84 (the CRS for the data returned by
 the REST service) to WEB_MERCATOR (identified by `EPSG:3857`) that is needed to display the geometry on the map.
 
 ```javascript
-
 const format = new GeoJSON( {dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857'} );
 
 const trajectorySource = new VectorSource(
@@ -490,7 +486,6 @@ First, we need to extend our `TrajectoryRepository` with the specialised `bbox()
 create the following interface
 
 ```java
-
 @Component
 public interface TrajectoryCustomRepository {
 
@@ -554,7 +549,7 @@ $ mvn package
 $ java -jar target/route-analyser-0.0.1-SNAPSHOT.jar
 ```
 
-And point your browser to `http://localhost:9000`
+And point your browser to `http://localhost:9000`.
 
 Now if we run this the first time, we get this error.
 
@@ -566,7 +561,7 @@ org.postgresql.util.PSQLException: ERROR: this box2d comparison operator is expe
 So we do as we are told.
 
 ```bash
-docker exec -it cockroach bash -c "cat <<EOF | ./cockroach sql --insecure
+$ docker exec -it cockroach bash -c "cat <<EOF | ./cockroach sql --insecure
 SET CLUSTER SETTING sql.spatial.experimental_box2d_comparison_operators.enabled = on;
 quit
 EOF"
@@ -574,7 +569,7 @@ EOF"
 
 Beware, there are serious limitations to this implementation. First there are no limits set on the result size. As it
 happens, most of the trajectories were registered in and around Beijing. So if you set the map extent to Beijing, then
-most of the dataset will get serialized to Json and sent to your browser. This might crash your browser, if the REST
+most of the dataset will get serialized to JSON and sent to your browser. This might crash your browser, if the REST
 service process doesn't throw an OutOfMemoryError first.
 
 There are ways around this depending on your use case. You might set an arbitrary limit on the number of features to send, for example. Another
