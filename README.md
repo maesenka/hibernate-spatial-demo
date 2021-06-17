@@ -349,8 +349,7 @@ $ http GET http://localhost:9000/api/trajectories page==5 \
 }
 ```
 
-The `jq` expression we used above iterates over each Trajectory JSON object, and maps it to an object with only the duration,
-and the link << sentence incomplete >>.
+The `jq` expression we used above iterates over each Trajectory JSON object, and maps it to an object with only the duration, and the link to the trajectory.
 
 Now let's inspect the shortest trajectory.
 
